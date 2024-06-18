@@ -23,8 +23,12 @@ function install_latest_in
     end
     for package in (string split " " $packages)
       printf "   - $package: "
+      set -l current_version (jq -r ".\"$key\"[\"$package\"]" $package_json_tmp | string replace -r '\^' '')
+      if test $current_version = "*"
+        printf "\033[36m*\033[0m\n"
+        continue
+      end
       set -l latest_version (npm show $package version)
-      set -l current_version (jq -r ".\"$key\"[\"$package\"]" $package_json_tmp)
       if test $latest_version = $current_version
         printf "\033[36m[latest]\033[0m\n"
         continue
@@ -61,7 +65,7 @@ end
 
 function install_latest
   install_latest_in . $argv
-  if test (jq -e '.workspaces' package.json) = null
+  if test ! -f package.json -o ! (jq '.workspaces | length' package.json)
     return
   end
   set -l workspaces (jq -r '.workspaces[] // empty' package.json | string trim)
